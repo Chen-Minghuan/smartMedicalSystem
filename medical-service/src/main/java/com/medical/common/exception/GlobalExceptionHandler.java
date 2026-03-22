@@ -57,6 +57,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResultVo<?> handleDefaultException(Exception e) {
         log.error("系统错误: {}", e.getMessage(), e);
-        return ResultVo.build(GlobalCodeEnum.INTERNAL_SERVER_ERROR, e.getMessage());
+        String detail = e.getMessage();
+        if (e.getCause() != null) {
+            detail = detail + "; Caused by: " + e.getCause().getMessage();
+        }
+        return ResultVo.build(GlobalCodeEnum.INTERNAL_SERVER_ERROR, detail);
     }
 }

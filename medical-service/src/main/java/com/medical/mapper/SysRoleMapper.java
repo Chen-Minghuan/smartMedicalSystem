@@ -11,4 +11,6 @@ import java.util.List;
 public interface SysRoleMapper extends BaseMapper<SysRole> {
 
     List<String> selectRoleCodesByUserId(@Param("userId") Long userId);
+
+    List<String> selectRoleNamesByUserId(@Param("userId") Long userId);
 }
