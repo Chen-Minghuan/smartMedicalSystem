@@ -39,15 +39,16 @@ const userInfo = computed(() => {
 
 const roleName = computed(() => {
   const roles = userInfo.value?.roles || []
+  if (!roles.length) return ''
   const roleMap = {
     SUPER_ADMIN: '超级管理员',
     ADMIN: '医院管理员',
     DOCTOR: '医生',
     PATIENT: '患者',
     NURSE: '护士',
-    RECEPTIONIST: '挂号员'
+    RECEPTIONIST: '挂号收费员'
   }
-  return roles.length ? roleMap[roles[0]] || roles[0] : ''
+  return roleMap[roles[0]] || roles[0]
 })
 
 const handleLogout = async () => {

@@ -28,7 +28,8 @@ request.interceptors.response.use(
       if (res.code === 400) {
         ElMessage.warning(res.message || '操作提示')
       } else {
-        ElMessage.error(res.message || '请求失败')
+        const msg = res.message || (res.data && typeof res.data === 'string' ? res.data : '请求失败')
+        ElMessage.error(msg)
       }
       return Promise.reject(new Error(res.message || '请求失败'))
     }
@@ -40,7 +41,8 @@ request.interceptors.response.use(
     } else if (error.response?.status === 403) {
       ElMessage.warning('权限不足')
     } else {
-      ElMessage.error(error.message || '网络异常')
+      const msg = error.response?.data?.message || error.response?.data?.data || error.message || '网络异常'
+      ElMessage.error(typeof msg === 'string' ? msg : '网络异常')
     }
     return Promise.reject(error)
   }
