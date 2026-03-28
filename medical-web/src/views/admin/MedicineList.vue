@@ -141,6 +141,8 @@
     <el-dialog
       v-model="createDialogVisible"
       width="780px"
+      :append-to-body="true"
+      :modal-append-to-body="true"
       class="medicine-dialog edit-dialog create-medicine-dialog"
       :close-on-click-modal="false"
       align-center
@@ -271,6 +273,8 @@
     <el-dialog
       v-model="detailDialogVisible"
       width="640px"
+      :append-to-body="true"
+      :modal-append-to-body="true"
       class="medicine-dialog edit-dialog"
       :close-on-click-modal="false"
       align-center
