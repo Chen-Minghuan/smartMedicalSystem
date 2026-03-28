@@ -118,3 +118,24 @@ export function getRoleList(params) {
     params
   })
 }
+
+/**
+ * 药品分页
+ */
+export function getMedicinePage(params) {
+  return request({
+    url: '/admin/medicine/page',
+    method: 'get',
+    params
+  })
+}
+
+/**
+ * 药品分类（下拉）
+ */
+export function getMedicineCategories() {
+  return request({
+    url: '/admin/medicine/categories',
+    method: 'get'
+  })
+}

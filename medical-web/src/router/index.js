@@ -24,7 +24,7 @@ const routes = [
       { path: 'admin/patient', component: Placeholder, meta: { title: '患者管理' } },
       { path: 'admin/schedule', component: Placeholder, meta: { title: '排班管理' } },
       { path: 'admin/appointment', component: Placeholder, meta: { title: '预约管理' } },
-      { path: 'admin/medicine', component: Placeholder, meta: { title: '药品管理' } },
+      { path: 'admin/medicine', component: () => import('@/views/admin/MedicineList.vue'), meta: { title: '药品列表' } },
       { path: 'admin/system/user', component: () => import('@/views/admin/UserManagement.vue'), meta: { title: '用户管理' } },
       { path: 'admin/system/role', component: () => import('@/views/admin/RoleManagement.vue'), meta: { title: '角色管理' } },
       { path: 'user/password', component: Placeholder, meta: { title: '修改密码' } },
