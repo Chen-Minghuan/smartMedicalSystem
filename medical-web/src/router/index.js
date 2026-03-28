@@ -20,8 +20,21 @@ const routes = [
         meta: { title: '工作台' }
       },
       { path: 'admin/dept', component: Placeholder, meta: { title: '科室管理' } },
-      { path: 'admin/doctor', component: Placeholder, meta: { title: '医生管理' } },
-      { path: 'admin/patient', component: Placeholder, meta: { title: '患者管理' } },
+      {
+        path: 'admin/doctor',
+        component: () => import('@/views/admin/StaffList.vue'),
+        meta: { title: '医生列表', staffRoleCode: 'DOCTOR' }
+      },
+      {
+        path: 'admin/nurse',
+        component: () => import('@/views/admin/StaffList.vue'),
+        meta: { title: '护士列表', staffRoleCode: 'NURSE' }
+      },
+      {
+        path: 'admin/patient',
+        component: () => import('@/views/admin/StaffList.vue'),
+        meta: { title: '患者列表', staffRoleCode: 'PATIENT' }
+      },
       { path: 'admin/schedule', component: Placeholder, meta: { title: '排班管理' } },
       { path: 'admin/appointment', component: Placeholder, meta: { title: '预约管理' } },
       { path: 'admin/medicine', component: () => import('@/views/admin/MedicineList.vue'), meta: { title: '药品列表' } },

@@ -23,7 +23,8 @@ export const adminMenuItems = [
     title: '医生管理',
     icon: 'fa-solid fa-user-doctor',
     children: [
-      { index: '2-1', label: '医生列表', icon: 'fa-solid fa-user', url: '/admin/doctor' }
+      { index: '2-1', label: '医生列表', icon: 'fa-solid fa-user-doctor', url: '/admin/doctor' },
+      { index: '2-2', label: '护士列表', icon: 'fa-solid fa-user-nurse', url: '/admin/nurse' }
     ]
   },
   {
