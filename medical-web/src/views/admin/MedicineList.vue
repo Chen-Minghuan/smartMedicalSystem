@@ -320,7 +320,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, reactive, computed } from 'vue'
+import { ref, onMounted, reactive, computed, watch } from 'vue'
 import { useRoute, onBeforeRouteUpdate } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
@@ -333,7 +333,7 @@ import {
 } from '@/api/admin'
 
 const route = useRoute()
-const isStockWarningRoute = computed(() => route.meta.stockWarningOnly === true)
+const isStockWarningRoute = computed(() => route.path === '/admin/medicine-stock-warning')
 const stockWarningSwitch = ref(false)
 const effectiveStockWarning = computed(() => isStockWarningRoute.value || stockWarningSwitch.value)
 
@@ -424,12 +424,12 @@ const onStockWarningChange = () => {
   loadData()
 }
 
-const medicineRoutes = ['/admin/medicine', '/admin/medicine-stock-warning']
-onBeforeRouteUpdate((to, from) => {
-  if (!medicineRoutes.includes(to.path) || !medicineRoutes.includes(from.path)) return
-  if (to.path === from.path) return
-  currentPage.value = 1
-  loadData()
+watch(() => route.path, (newPath, oldPath) => {
+  const medicinePaths = ['/admin/medicine', '/admin/medicine-stock-warning']
+  if (medicinePaths.includes(newPath) && medicinePaths.includes(oldPath) && newPath !== oldPath) {
+    currentPage.value = 1
+    loadData()
+  }
 })
 
 const formatMoney = (v) => {
