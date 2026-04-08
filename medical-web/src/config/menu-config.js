@@ -72,6 +72,9 @@ export const adminMenuItems = [
   }
 ]
 
+/** 医院管理员菜单（无「系统管理」：用户/角色仅超级管理员可操作，与后端权限一致） */
+export const adminMenuItemsHospital = adminMenuItems.filter((item) => item.index !== '6')
+
 // 医生菜单
 export const doctorMenuItems = [
   { index: '0', title: '工作台', icon: 'fa-solid fa-house', url: '/doctor/dashboard' },
@@ -204,7 +207,8 @@ export function resolveDefaultHomePath() {
 
 export function getMenuByRole(roles) {
   if (!roles || !roles.length) return minimalMenuItems
-  if (roles.includes('SUPER_ADMIN') || roles.includes('ADMIN')) return adminMenuItems
+  if (roles.includes('SUPER_ADMIN')) return adminMenuItems
+  if (roles.includes('ADMIN')) return adminMenuItemsHospital
   if (roles.includes('DOCTOR')) return doctorMenuItems
   if (roles.includes('PATIENT')) return patientMenuItems
   if (roles.includes('RECEPTIONIST')) return receptionMenuItems

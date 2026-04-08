@@ -49,8 +49,16 @@ const routes = [
         component: () => import('@/views/admin/MedicineStockWarning.vue'),
         meta: { title: '库存预警', stockWarningOnly: true }
       },
-      { path: 'admin/system/user', component: () => import('@/views/admin/UserManagement.vue'), meta: { title: '用户管理' } },
-      { path: 'admin/system/role', component: () => import('@/views/admin/RoleManagement.vue'), meta: { title: '角色管理' } },
+      {
+        path: 'admin/system/user',
+        component: () => import('@/views/admin/UserManagement.vue'),
+        meta: { title: '用户管理', requiresSuperAdmin: true }
+      },
+      {
+        path: 'admin/system/role',
+        component: () => import('@/views/admin/RoleManagement.vue'),
+        meta: { title: '角色管理', requiresSuperAdmin: true }
+      },
       { path: 'user/password', component: Placeholder, meta: { title: '修改密码' } },
       { path: 'doctor/dashboard', component: Placeholder, meta: { title: '医生工作台' } },
       { path: 'doctor/schedule', component: Placeholder, meta: { title: '我的排班' } },
@@ -89,9 +97,21 @@ router.beforeEach((to, from, next) => {
   const userInfo = sessionStorage.getItem('userInfo')
   if (!userInfo && to.path !== '/login') {
     next({ path: '/login', query: { redirect: to.fullPath } })
-  } else {
-    next()
+    return
   }
+  if (to.meta.requiresSuperAdmin && userInfo) {
+    try {
+      const roles = JSON.parse(userInfo).roles || []
+      if (!roles.includes('SUPER_ADMIN')) {
+        next({ path: '/admin/dashboard', replace: true })
+        return
+      }
+    } catch {
+      next({ path: '/admin/dashboard', replace: true })
+      return
+    }
+  }
+  next()
 })
 
 export default router
