@@ -18,6 +18,7 @@ import com.medical.mapper.SysDeptMapper;
 import com.medical.mapper.SysRoleMapper;
 import com.medical.mapper.SysUserMapper;
 import com.medical.mapper.SysUserRoleMapper;
+import com.medical.service.PatientExtensionService;
 import com.medical.service.StaffDeptAssignmentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -53,6 +54,7 @@ public class SysUserController {
     private final SysUserRoleMapper sysUserRoleMapper;
     private final SysDeptMapper sysDeptMapper;
     private final StaffDeptAssignmentService staffDeptAssignmentService;
+    private final PatientExtensionService patientExtensionService;
     private final PasswordEncoder passwordEncoder;
 
     @GetMapping("/page")
@@ -236,6 +238,7 @@ public class SysUserController {
         }
         List<String> roleCodes = roles.stream().map(SysRole::getRoleCode).collect(Collectors.toList());
         staffDeptAssignmentService.upsertStaffRecordsForUser(user.getUserId(), user.getDeptId(), roleCodes);
+        patientExtensionService.syncPatientExtension(user.getUserId());
         return ResultVo.ok();
     }
 
@@ -325,6 +328,7 @@ public class SysUserController {
                     id, refreshed != null ? refreshed.getDeptId() : null,
                     codes != null ? codes : Collections.emptyList());
         }
+        patientExtensionService.syncPatientExtension(id);
         return ResultVo.ok();
     }
 
@@ -342,6 +346,7 @@ public class SysUserController {
         sysUserMapper.update(null, new LambdaUpdateWrapper<SysUser>()
                 .eq(SysUser::getUserId, id)
                 .set(SysUser::getStatus, status));
+        patientExtensionService.syncPatientExtension(id);
         return ResultVo.ok();
     }
 
@@ -362,6 +367,8 @@ public class SysUserController {
         if (!isSuperAdmin && roleCodes != null && roleCodes.contains("SUPER_ADMIN")) {
             throw new BusinessWarningException("无权删除超级管理员账号");
         }
+        staffDeptAssignmentService.removeStaffExtensionsByUserId(id);
+        patientExtensionService.deletePatientByUserId(id);
         sysUserRoleMapper.delete(
                 new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, id));
         sysUserMapper.deleteById(id);

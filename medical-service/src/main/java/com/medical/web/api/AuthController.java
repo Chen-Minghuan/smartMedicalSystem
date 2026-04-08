@@ -13,6 +13,7 @@ import com.medical.domain.vo.UserInfoVo;
 import com.medical.mapper.SysRoleMapper;
 import com.medical.mapper.SysUserMapper;
 import com.medical.mapper.SysUserRoleMapper;
+import com.medical.service.PatientExtensionService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -27,6 +28,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -46,6 +48,7 @@ public class AuthController {
     private final SysRoleMapper sysRoleMapper;
     private final SysUserRoleMapper sysUserRoleMapper;
     private final PasswordEncoder passwordEncoder;
+    private final PatientExtensionService patientExtensionService;
 
     @PostMapping("/api/login")
     public ResultVo<UserInfoVo> login(@Valid @RequestBody LoginForm form,
@@ -89,6 +92,7 @@ public class AuthController {
     }
 
     @PostMapping("/api/register")
+    @Transactional(rollbackFor = Exception.class)
     public ResultVo<Void> register(@Valid @RequestBody RegisterForm form) {
         String username = form.getUsername().trim();
         if (!form.getPassword().equals(form.getConfirmPassword())) {
@@ -131,6 +135,7 @@ public class AuthController {
         userRole.setCreatedTime(now);
         sysUserRoleMapper.insert(userRole);
 
+        patientExtensionService.syncPatientExtension(user.getUserId());
         return ResultVo.ok();
     }
 

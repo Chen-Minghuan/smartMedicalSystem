@@ -20,6 +20,7 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -199,24 +200,56 @@ public class StaffDeptAssignmentService {
     }
 
     /**
-     * 用户已指定 deptId 时，仅同步 doctor/nurse 行（不覆盖用户手选科室）。
+     * 按角色维护 doctor / nurse：优先使用传入或用户表中的科室；为空则按 role_code 匹配科室、最后回落到通科/护理部。
+     * 不再具备医师/护士类角色时删除扩展表行，与 sys_user_role 一致。
      */
     @Transactional(rollbackFor = Exception.class)
     public void upsertStaffRecordsForUser(Long userId, Long deptId, List<String> roleCodes) {
-        if (deptId == null) {
-            return;
+        if (roleCodes == null) {
+            roleCodes = Collections.emptyList();
         }
         SysUser user = sysUserMapper.selectById(userId);
         if (user == null) {
             return;
         }
+        Map<String, Long> deptCodeToId = loadDeptCodeToId();
         boolean isPhysician = roleCodes.stream().anyMatch(PHYSICIAN_ROLES::contains);
         boolean isNurse = roleCodes.stream().anyMatch(NURSE_ROLES::contains);
+
         if (isPhysician) {
-            upsertDoctor(user, deptId);
+            Long effective = deptId != null ? deptId : user.getDeptId();
+            if (effective == null) {
+                effective = pickDeptId(roleCodes, PHYSICIAN_ROLE_PRIORITY, deptCodeToId);
+            }
+            if (effective == null) {
+                effective = deptCodeToId.get("DOCTOR");
+            }
+            if (effective != null) {
+                upsertDoctor(user, effective);
+            }
+        } else {
+            doctorMapper.delete(new LambdaQueryWrapper<Doctor>().eq(Doctor::getUserId, userId));
         }
+
         if (isNurse) {
-            upsertNurse(user, deptId);
+            Long effective = deptId != null ? deptId : user.getDeptId();
+            if (effective == null) {
+                effective = pickDeptId(roleCodes, NURSE_ROLE_PRIORITY, deptCodeToId);
+            }
+            if (effective == null) {
+                effective = deptCodeToId.get("NURSE");
+            }
+            if (effective != null) {
+                upsertNurse(user, effective);
+            }
+        } else {
+            nurseMapper.delete(new LambdaQueryWrapper<Nurse>().eq(Nurse::getUserId, userId));
         }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void removeStaffExtensionsByUserId(Long userId) {
+        doctorMapper.delete(new LambdaQueryWrapper<Doctor>().eq(Doctor::getUserId, userId));
+        nurseMapper.delete(new LambdaQueryWrapper<Nurse>().eq(Nurse::getUserId, userId));
     }
 }
