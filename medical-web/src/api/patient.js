@@ -5,7 +5,7 @@ import request from '@/utils/request'
  */
 export function getMyAppointments() {
     return request({
-        url: '/api/patient/appointment/my',
+        url: '/patient/appointment/my',
         method: 'get'
     })
 }
@@ -16,7 +16,7 @@ export function getMyAppointments() {
  */
 export function cancelAppointment(appointmentId) {
     return request({
-        url: `/api/patient/appointment/cancel/${appointmentId}`,
+        url: `/patient/appointment/cancel/${appointmentId}`,
         method: 'put'
     })
 }
@@ -27,7 +27,7 @@ export function cancelAppointment(appointmentId) {
  */
 export function getAppointmentDetail(appointmentId) {
     return request({
-        url: `/api/patient/appointment/${appointmentId}`,
+        url: `/patient/appointment/${appointmentId}`,
         method: 'get'
     })
 }
@@ -38,7 +38,7 @@ export function getAppointmentDetail(appointmentId) {
  */
 export function createAppointment(data) {
     return request({
-        url: '/api/patient/appointment/create',
+        url: '/patient/appointment/create',
         method: 'post',
         data: data
     })
