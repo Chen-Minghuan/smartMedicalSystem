@@ -1,6 +1,59 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<beans xmlns="http://www.springframework.org/schema/beans"
-       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.medical.mapper.AppointmentMapper">
 
-</beans>
+    <!-- 查询患者预约列表 -->
+    <select id="selectPatientAppointments" resultType="com.medical.domain.vo.AppointmentVo">
+        SELECT
+        a.appointment_id,
+        a.appointment_no,
+        a.patient_id,
+        p.name AS patient_name,
+        a.doctor_id,
+        d.name AS doctor_name,
+        d.title AS doctor_title,
+        dept.name AS dept_name,
+        DATE_FORMAT(a.appointment_date, '%Y-%m-%d') AS appointment_date,
+        a.time_slot,
+        a.queue_no,
+        a.status,
+        a.fee_amount,
+        a.paid,
+        a.created_time
+        FROM appointment a
+        LEFT JOIN patient p ON a.patient_id = p.patient_id
+        LEFT JOIN doctor d ON a.doctor_id = d.doctor_id
+        LEFT JOIN sys_dept dept ON d.dept_id = dept.dept_id
+        WHERE a.patient_id = #{patientId}
+        <if test="status != null">
+            AND a.status = #{status}
+        </if>
+        ORDER BY a.appointment_date DESC, a.created_time DESC
+    </select>
+
+    <!-- 查询预约详情 -->
+    <select id="selectAppointmentDetail" resultType="com.medical.domain.vo.AppointmentVo">
+        SELECT
+            a.appointment_id,
+            a.appointment_no,
+            a.patient_id,
+            p.name AS patient_name,
+            a.doctor_id,
+            d.name AS doctor_name,
+            d.title AS doctor_title,
+            dept.name AS dept_name,
+            DATE_FORMAT(a.appointment_date, '%Y-%m-%d') AS appointment_date,
+            a.time_slot,
+            a.queue_no,
+            a.status,
+            a.fee_amount,
+            a.paid,
+            a.created_time
+        FROM appointment a
+                 LEFT JOIN patient p ON a.patient_id = p.patient_id
+                 LEFT JOIN doctor d ON a.doctor_id = d.doctor_id
+                 LEFT JOIN sys_dept dept ON d.dept_id = dept.dept_id
+        WHERE a.appointment_id = #{appointmentId}
+    </select>
+
+</mapper>
