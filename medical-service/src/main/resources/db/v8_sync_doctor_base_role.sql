@@ -151,23 +151,3 @@ UPDATE sys_user u
     SET u.dept_id = d.dept_id,
         u.updated_time = NOW()
 WHERE (u.dept_id IS NULL OR u.dept_id != d.dept_id);
-
--- ============================================================
--- 验证结果
--- ============================================================
-SELECT
-    u.user_id,
-    u.username,
-    u.name,
-    u.dept_id,
-    d.name as dept_name,
-    d.code as dept_code,
-    GROUP_CONCAT(DISTINCT r.role_code ORDER BY r.role_code) as roles
-FROM sys_user u
-         LEFT JOIN sys_dept d ON u.dept_id = d.dept_id
-         LEFT JOIN sys_user_role ur ON u.user_id = ur.user_id
-         LEFT JOIN sys_role r ON ur.role_id = r.role_id
-WHERE r.role_code IN ('DOCTOR', 'ER_DOCTOR', 'PEDIATRICIAN', 'SURGEON', 'NURSE')
-GROUP BY u.user_id
-ORDER BY u.user_id
-    LIMIT 20;

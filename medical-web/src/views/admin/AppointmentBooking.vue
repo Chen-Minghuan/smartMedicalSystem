@@ -246,184 +246,186 @@
 </template>
 
 <script setup>
-  import { ref, computed, onMounted } from 'vue'
-  import { useRouter } from 'vue-router'
-  import { ElMessage } from 'element-plus'
-  import { getDeptOptions, getUserPage ,getAvailableDates, getScheduleSlots, createAppointment} from '@/api/admin'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { getDeptOptions, getUserPage, getAvailableDates, getScheduleSlots, createAppointment } from '@/api/admin'
 
-  const router = useRouter()
+const router = useRouter()
 
-  // 步骤控制
-  const currentStep = ref(1)
+// 步骤控制
+const currentStep = ref(1)
 
-  // 科室相关
-  const deptKeyword = ref('')
-  const deptList = ref([])
-  const deptLoading = ref(false)
-  const selectedDept = ref(null)
+// 科室相关
+const deptKeyword = ref('')
+const deptList = ref([])
+const deptLoading = ref(false)
+const selectedDept = ref(null)
 
-  // 医生相关
-  const doctorList = ref([])
-  const doctorLoading = ref(false)
-  const selectedDoctor = ref(null)
+// 医生相关
+const doctorList = ref([])
+const doctorLoading = ref(false)
+const selectedDoctor = ref(null)
 
-  // 排班相关
-  const availableDates = ref([])
-  const dateLoading = ref(false)
-  const selectedDate = ref('')
-  const selectedScheduleId = ref(null)
-  const selectedTimeSlot = ref('')
-  const timeSlots = ref([])
-  const scheduleLoading = ref(false)
+// 排班相关
+const availableDates = ref([])
+const dateLoading = ref(false)
+const selectedDate = ref('')
+const selectedScheduleId = ref(null)
+const selectedTimeSlot = ref('')
+const timeSlots = ref([])
+const scheduleLoading = ref(false)
 
-  // 预约提交
-  const submitting = ref(false)
-  const successVisible = ref(false)
-  const appointmentNo = ref('')
+// 预约提交
+const submitting = ref(false)
+const successVisible = ref(false)
+const appointmentNo = ref('')
 
-  // 星期映射
-  const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+// 星期映射
+const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
 
-  // 判断下一步是否可用
-  const canNext = computed(() => {
-    if (currentStep.value === 1) return selectedDept.value !== null
-    if (currentStep.value === 2) return selectedDoctor.value !== null
-    if (currentStep.value === 3) return selectedDate.value && selectedScheduleId.value
-    return false
-  })
+// 时段开始时间映射
+const timeSlotStartMap = {
+  '08:00-09:00': 8 * 60,
+  '09:00-10:00': 9 * 60,
+  '10:00-11:00': 10 * 60,
+  '14:00-15:00': 14 * 60,
+  '15:00-16:00': 15 * 60,
+  '16:00-17:00': 16 * 60,
+  '17:00-18:00': 17 * 60
+}
 
-  // 加载科室列表
-  const loadDeptList = async () => {
-    deptLoading.value = true
-    try {
-      const res = await getDeptOptions()
-      let list = res.data || res || []
-      // 只显示 deptId < 20 的科室
-      list = list.filter(d => d.deptId < 20)
-      if (deptKeyword.value) {
-        const kw = deptKeyword.value.toLowerCase()
-        list = list.filter(d =>
-            d.name?.toLowerCase().includes(kw) ||
-            d.code?.toLowerCase().includes(kw)
-        )
-      }
-      deptList.value = list
-    } catch (error) {
-      console.error('加载科室失败:', error)
-      ElMessage.error('加载科室失败')
-    } finally {
-      deptLoading.value = false
+// 判断下一步是否可用
+const canNext = computed(() => {
+  if (currentStep.value === 1) return selectedDept.value !== null
+  if (currentStep.value === 2) return selectedDoctor.value !== null
+  if (currentStep.value === 3) return selectedDate.value && selectedScheduleId.value
+  return false
+})
+
+// 加载科室列表
+const loadDeptList = async () => {
+  deptLoading.value = true
+  try {
+    const res = await getDeptOptions()
+    let list = res.data || res || []
+    // 只显示 deptId < 20 的科室
+    list = list.filter(d => d.deptId < 20)
+    if (deptKeyword.value) {
+      const kw = deptKeyword.value.toLowerCase()
+      list = list.filter(d =>
+          d.name?.toLowerCase().includes(kw) ||
+          d.code?.toLowerCase().includes(kw)
+      )
     }
+    deptList.value = list
+  } catch (error) {
+    console.error('加载科室失败:', error)
+    ElMessage.error('加载科室失败')
+  } finally {
+    deptLoading.value = false
   }
+}
 
-  // 选择科室
-  const selectDept = (dept) => {
-    selectedDept.value = dept
-    currentStep.value = 2
-    loadDoctorList()
+// 选择科室
+const selectDept = (dept) => {
+  selectedDept.value = dept
+  currentStep.value = 2
+  loadDoctorList()
+}
+
+// 加载医生列表
+const loadDoctorList = async () => {
+  if (!selectedDept.value) return
+  doctorLoading.value = true
+  try {
+    const res = await getUserPage({
+      current: 1,
+      size: 100,
+      deptId: selectedDept.value.deptId,
+      status: 1,
+      roleCode: 'DOCTOR'
+    })
+    doctorList.value = res.data?.list || res.list || []
+  } catch (error) {
+    console.error('加载医生失败:', error)
+    ElMessage.error('加载医生失败')
+  } finally {
+    doctorLoading.value = false
   }
+}
 
-  // 加载医生列表
-  const loadDoctorList = async () => {
-    if (!selectedDept.value) return
-    doctorLoading.value = true
-    try {
-      const res = await getUserPage({
-        current: 1,
-        size: 100,
-        deptId: selectedDept.value.deptId,
-        status: 1
-      })
-      doctorList.value = res.data?.list || res.list || []
-    } catch (error) {
-      console.error('加载医生失败:', error)
-      ElMessage.error('加载医生失败')
-    } finally {
-      doctorLoading.value = false
-    }
-  }
+// 选择医生
+const selectDoctor = async (doctor) => {
+  selectedDoctor.value = doctor
+  currentStep.value = 3
+  await loadAvailableDates()
+}
 
-  // 选择医生
-  const selectDoctor = async (doctor) => {
-    selectedDoctor.value = doctor
-    currentStep.value = 3
-    await loadAvailableDates()
-  }
+// 加载可预约日期
+const loadAvailableDates = async () => {
+  if (!selectedDoctor.value) return
+  dateLoading.value = true
+  try {
+    const res = await getAvailableDates(selectedDoctor.value.userId)
+    let dates = res.data || res || []
 
-  // 加载可预约日期
-  const loadAvailableDates = async () => {
-    if (!selectedDoctor.value) return
-    dateLoading.value = true
-    try {
-      const res = await getAvailableDates(selectedDoctor.value.userId)
-      let dates = res.data || res || []
+    const now = new Date()
+    const currentTimeMinutes = now.getHours() * 60 + now.getMinutes()
 
-      const now = new Date()
-      const currentTimeMinutes = now.getHours() * 60 + now.getMinutes()
+    // 过滤掉所有时段都已过期的日期
+    const filteredDates = []
+    for (const dateStr of dates) {
+      const dateObj = new Date(dateStr)
+      dateObj.setHours(0, 0, 0, 0)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const isToday = dateObj.getTime() === today.getTime()
 
-      const timeSlotStartMap = {
-        '08:00-09:00': 8 * 60,
-        '09:00-10:00': 9 * 60,
-        '10:00-11:00': 10 * 60,
-        '14:00-15:00': 14 * 60,
-        '15:00-16:00': 15 * 60,
-        '16:00-17:00': 16 * 60,
-        '17:00-18:00': 17 * 60
-      }
-
-      // 过滤掉所有时段都已过期的日期
-      const filteredDates = []
-      for (const dateStr of dates) {
-        const dateObj = new Date(dateStr)
-        dateObj.setHours(0, 0, 0, 0)
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
-        const isToday = dateObj.getTime() === today.getTime()
-
-        if (!isToday) {
-          filteredDates.push(dateStr)
-        } else {
-          const slotsRes = await getScheduleSlots(selectedDoctor.value.userId, dateStr)
-          const slots = slotsRes.data || slotsRes || []
-
-          const hasFutureSlots = slots.some(slot => {
-            const startMinutes = timeSlotStartMap[slot.timeSlot]
-            if (!startMinutes) return true
-            return startMinutes > currentTimeMinutes
-          })
-
-          if (hasFutureSlots) {
-            filteredDates.push(dateStr)
-          }
-        }
-      }
-
-      // 转换为前端需要的格式
-      availableDates.value = filteredDates.map(dateStr => {
-        const date = new Date(dateStr)
-        return {
-          value: dateStr,
-          week: weekdays[date.getDay()],
-          day: `${date.getMonth() + 1}/${date.getDate()}`
-        }
-      })
-
-      // 默认选中第一个日期
-      if (availableDates.value.length > 0) {
-        selectedDate.value = availableDates.value[0].value
-        await loadScheduleSlots()
+      if (!isToday) {
+        filteredDates.push(dateStr)
       } else {
-        selectedDate.value = ''
-        timeSlots.value = []
-        ElMessage.warning('暂无可用预约日期')
+        const slotsRes = await getScheduleSlots(selectedDoctor.value.userId, dateStr)
+        const slots = slotsRes.data || slotsRes || []
+
+        const hasFutureSlots = slots.some(slot => {
+          const startMinutes = timeSlotStartMap[slot.timeSlot]
+          if (!startMinutes) return true
+          return startMinutes > currentTimeMinutes
+        })
+
+        if (hasFutureSlots) {
+          filteredDates.push(dateStr)
+        }
       }
-    } catch (error) {
-      console.error('加载可预约日期失败:', error)
-      ElMessage.error('加载可预约日期失败')
-    } finally {
-      dateLoading.value = false
     }
+
+    // 转换为前端需要的格式
+    availableDates.value = filteredDates.map(dateStr => {
+      const date = new Date(dateStr)
+      return {
+        value: dateStr,
+        week: weekdays[date.getDay()],
+        day: `${date.getMonth() + 1}/${date.getDate()}`
+      }
+    })
+
+    // 默认选中第一个日期
+    if (availableDates.value.length > 0) {
+      selectedDate.value = availableDates.value[0].value
+      await loadScheduleSlots()
+    } else {
+      selectedDate.value = ''
+      timeSlots.value = []
+      ElMessage.warning('暂无可用预约日期')
+    }
+  } catch (error) {
+    console.error('加载可预约日期失败:', error)
+    ElMessage.error('加载可预约日期失败')
+  } finally {
+    dateLoading.value = false
   }
+}
 
 // 选择日期
 const selectDate = async (date) => {
@@ -450,25 +452,12 @@ const loadScheduleSlots = async () => {
 
     if (isToday) {
       const now = new Date()
-      const currentHour = now.getHours()
-      const currentMinute = now.getMinutes()
-      const currentTimeMinutes = currentHour * 60 + currentMinute
-
-      // 时段开始时间映射（根据你的时段格式调整）
-      const timeSlotStartMap = {
-        '08:00-09:00': 8 * 60,
-        '09:00-10:00': 9 * 60,
-        '10:00-11:00': 10 * 60,
-        '14:00-15:00': 14 * 60,
-        '15:00-16:00': 15 * 60,
-        '16:00-17:00': 16 * 60,
-        '17:00-18:00': 17 * 60
-      }
+      const currentTimeMinutes = now.getHours() * 60 + now.getMinutes()
 
       // 只保留开始时间 > 当前时间的时段
       slots = slots.filter(slot => {
         const startMinutes = timeSlotStartMap[slot.timeSlot]
-        if (!startMinutes) return true // 无法识别的时段，保留
+        if (!startMinutes) return true
         return startMinutes > currentTimeMinutes
       })
     }
@@ -533,7 +522,7 @@ const submitAppointment = async () => {
       scheduleId: selectedScheduleId.value,
     })
 
-    appointmentNo.value = res.data || 'APT' + Date.now()
+    appointmentNo.value = res.data?.appointmentNo || res || 'APT' + Date.now()
     successVisible.value = true
   } catch (error) {
     console.error('预约失败:', error)
@@ -565,6 +554,7 @@ const resetForm = () => {
   selectedTimeSlot.value = ''
   availableDates.value = []
   timeSlots.value = []
+  loadDeptList()
 }
 
 onMounted(() => {

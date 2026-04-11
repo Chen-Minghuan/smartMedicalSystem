@@ -12,6 +12,17 @@ export function getUserPage(params) {
 }
 
 /**
+ * 医生分页（doctor 业务表）
+ */
+export function getDoctorPage(params) {
+  return request({
+    url: '/admin/doctor/page',
+    method: 'get',
+    params
+  })
+}
+
+/**
  * 新增用户（含角色）
  */
 export function createUser(data) {
@@ -238,6 +249,70 @@ export function deleteDept(id) {
   })
 }
 
+// ==================== 管理端排班 ====================
+
+/** 排班分页/列表 */
+export function getScheduleList(params) {
+  return request({
+    url: '/admin/schedule/list',
+    method: 'get',
+    params
+  })
+}
+
+/** 新增排班 */
+export function createSchedule(data) {
+  return request({
+    url: '/admin/schedule',
+    method: 'post',
+    data
+  })
+}
+
+/** 更新排班 */
+export function updateSchedule(id, data) {
+  return request({
+    url: `/admin/schedule/${id}`,
+    method: 'put',
+    data
+  })
+}
+
+/** 删除排班 */
+export function deleteSchedule(id) {
+  return request({
+    url: `/admin/schedule/${id}`,
+    method: 'delete'
+  })
+}
+
+// ==================== 管理端预约 ====================
+
+/** 预约分页 */
+export function getAdminAppointmentPage(params) {
+  return request({
+    url: '/admin/appointment/page',
+    method: 'get',
+    params
+  })
+}
+
+/** 预约详情 */
+export function getAdminAppointmentDetail(id) {
+  return request({
+    url: `/admin/appointment/${id}`,
+    method: 'get'
+  })
+}
+
+/** 管理端取消预约 */
+export function cancelAdminAppointment(id) {
+  return request({
+    url: `/admin/appointment/${id}/cancel`,
+    method: 'put'
+  })
+}
+
 // ==================== 排班相关 ====================
 
 /**
@@ -288,10 +363,11 @@ export function cancelAppointment(appointmentId) {
 /**
  * 获取我的预约列表
  */
-export function getMyAppointments() {
+export function getMyAppointments(params) {
   return request({
     url: '/patient/appointment/my',
-    method: 'get'
+    method: 'get',
+    params
   })
 }
 
@@ -302,6 +378,27 @@ export function getAppointmentDetail(appointmentId) {
   return request({
     url: `/patient/appointment/${appointmentId}`,
     method: 'get'
+  })
+}
+
+
+/**
+ * 支付预约
+ */
+export function payAppointment(appointmentId) {
+  return request({
+    url: `/patient/appointment/pay/${appointmentId}`,
+    method: 'put'
+  })
+}
+
+/**
+ * 签到
+ */
+export function checkInAppointment(appointmentId) {
+  return request({
+    url: `/admin/appointment/${appointmentId}/checkin`,
+    method: 'put'
   })
 }
 
