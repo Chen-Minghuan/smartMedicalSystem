@@ -326,7 +326,7 @@ WHERE u.username = 'patient1010' AND r.role_code = 'PATIENT';
 
 -- ----------------------------
 -- 3) 专科/医师类角色补授「医生」基础角色（医生列表按 DOCTOR 筛选，须同时拥有）
---    与 v7_sync_doctor_base_role.sql 逻辑一致；新装库执行一次即可。
+--    与 v8_sync_doctor_base_role.sql 逻辑一致；新装库执行一次即可。
 -- ----------------------------
 INSERT IGNORE INTO sys_user_role (user_id, role_id, created_time)
 SELECT DISTINCT ur.user_id, dr.role_id, NOW()

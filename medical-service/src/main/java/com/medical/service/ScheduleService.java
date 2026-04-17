@@ -2,13 +2,17 @@ package com.medical.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.medical.domain.entity.Appointment;
 import com.medical.domain.entity.Doctor;
 import com.medical.domain.entity.Schedule;
 import com.medical.domain.vo.ScheduleSlotVo;
+import com.medical.mapper.AppointmentMapper;
 import com.medical.mapper.DoctorMapper;
 import com.medical.mapper.ScheduleMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -21,6 +25,7 @@ public class ScheduleService {
 
     private final ScheduleMapper scheduleMapper;
     private final DoctorMapper doctorMapper;
+    private final AppointmentMapper appointmentMapper;
 
     /**
      * 获取医生的可预约日期（未来7天内有排班的日期）
@@ -105,4 +110,26 @@ public class ScheduleService {
         );
         return updated > 0;
     }
+
+    /**
+     * 自动将过期未就诊的预约改为爽约
+     */
+    @Scheduled(cron = "0 0 2 * * ?") // 每天凌晨2点执行
+    @Transactional
+    public void autoExpireAppointments() {
+        // 查询所有 status=1（待就诊）且 appointmentDate < 当前日期 的预约
+        LambdaQueryWrapper<Appointment> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Appointment::getStatus, 1)
+                .lt(Appointment::getAppointmentDate, LocalDate.now());
+        List<Appointment> expiredList = appointmentMapper.selectList(wrapper);
+
+        for (Appointment a : expiredList) {
+            a.setStatus(4); // 改为爽约
+            a.setUpdatedTime(LocalDateTime.now());
+            appointmentMapper.updateById(a);
+            // 释放号源
+            releaseSlot(a.getScheduleId());
+        }
+    }
+
 }

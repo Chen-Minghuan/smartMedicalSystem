@@ -19,6 +19,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 患者端 - 预约管理 API
@@ -85,9 +86,20 @@ public class PatientAppointmentController {
      * 获取我的预约列表
      */
     @GetMapping("/my")
-    public ResultVo<List<AppointmentVo>> myAppointments() {
+    public ResultVo<List<AppointmentVo>> myAppointments(
+            @RequestParam(required = false) Integer status,
+            @RequestParam(required = false) Integer paid,
+            @RequestParam(required = false) String keyword) {
         Long patientId = getCurrentPatientId();
-        List<AppointmentVo> list = appointmentService.getPatientAppointments(patientId);
+        List<AppointmentVo> list = appointmentService.getPatientAppointments(patientId, status, paid, keyword);
+
+        // 排序：待支付 > 待就诊 > 已就诊 > 爽约 > 已取消
+        list = list.stream().sorted((o1, o2) -> {
+            int order1 = getAppointmentOrder(o1);
+            int order2 = getAppointmentOrder(o2);
+            return Integer.compare(order1, order2);
+        }).collect(Collectors.toList());
+
         return ResultVo.ok(list);
     }
 
@@ -100,4 +112,28 @@ public class PatientAppointmentController {
         AppointmentVo vo = appointmentService.getAppointmentDetail(appointmentId, patientId);
         return ResultVo.ok(vo);
     }
+
+    /**
+     * 获取预约排序优先级
+     * 待支付(1) > 待就诊(2) > 已就诊(3) > 爽约(4) > 已取消(5)
+     */
+    private int getAppointmentOrder(AppointmentVo v) {
+        if (v.getStatus() == 1 && v.getPaid() != null && v.getPaid() == 0) return 1;
+        if (v.getStatus() == 1 && v.getPaid() != null && v.getPaid() == 1) return 2;
+        if (v.getStatus() == 2) return 3;
+        if (v.getStatus() == 4) return 4;
+        if (v.getStatus() == 3) return 5;
+        return 6;
+    }
+
+    /**
+     * 支付预约
+     */
+    @PutMapping("/pay/{appointmentId}")
+    public ResultVo<Void> pay(@PathVariable Long appointmentId) {
+        Long patientId = getCurrentPatientId();
+        appointmentService.payAppointment(appointmentId, patientId);
+        return ResultVo.ok();
+    }
+
 }

@@ -55,12 +55,16 @@ public class AdminAppointmentController {
             @RequestParam(value = "size", defaultValue = "10") Long size,
             @RequestParam(value = "keyword", required = false) String keyword,
             @RequestParam(value = "status", required = false) Integer status,
+            @RequestParam(value = "paid", required = false) Integer paid,
             @RequestParam(value = "deptId", required = false) Long deptId,
             @RequestParam(value = "doctorId", required = false) Long doctorId,
             @RequestParam(value = "date", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date) {
         LambdaQueryWrapper<Appointment> wrapper = new LambdaQueryWrapper<>();
         if (status != null) {
             wrapper.eq(Appointment::getStatus, status);
+        }
+        if (paid != null) {
+            wrapper.eq(Appointment::getPaid, paid);
         }
         if (doctorId != null) {
             wrapper.eq(Appointment::getDoctorId, doctorId);
@@ -89,7 +93,6 @@ public class AdminAppointmentController {
             wrapper.and(w -> w.like(Appointment::getAppointmentNo, kw).or().like(Appointment::getTimeSlot, kw));
         }
 
-        // 先按 appointment 条件分页，再做 dept 过滤（dept 在 doctor 表）
         wrapper.orderByDesc(Appointment::getCreatedTime).orderByDesc(Appointment::getAppointmentId);
         Page<Appointment> page = appointmentMapper.selectPage(new Page<>(current, size), wrapper);
 
@@ -134,12 +137,28 @@ public class AdminAppointmentController {
                 .map(a -> toVo(a, doctorMap, patientMap, deptNameMap))
                 .collect(Collectors.toList());
 
+        // 排序：待支付 > 待就诊 > 已就诊 > 爽约 > 已取消
+        list = list.stream().sorted((o1, o2) -> {
+            int order1 = getAppointmentOrder(o1);
+            int order2 = getAppointmentOrder(o2);
+            return Integer.compare(order1, order2);
+        }).collect(Collectors.toList());
+
         PageResult<AppointmentVo> result = new PageResult<>();
         result.setCurrentPage(page.getCurrent());
         result.setPageSize(page.getSize());
         result.setTotal(page.getTotal());
         result.setList(list);
         return ResultVo.ok(result);
+    }
+
+    private int getAppointmentOrder(AppointmentVo v) {
+        if (v.getStatus() == 1 && v.getPaid() != null && v.getPaid() == 1) return 1;  // 待就诊
+        if (v.getStatus() == 1 && v.getPaid() != null && v.getPaid() == 0) return 2;  // 待支付
+        if (v.getStatus() == 2) return 3;   // 已就诊
+        if (v.getStatus() == 4) return 4;   // 爽约
+        if (v.getStatus() == 3) return 5;   // 已取消
+        return 6;
     }
 
     @GetMapping("/{appointmentId}")
@@ -178,8 +197,9 @@ public class AdminAppointmentController {
         if (a == null) {
             throw new ServiceException("预约记录不存在");
         }
+        // 只要状态是待就诊(1)就可以取消，不限制支付状态
         if (a.getStatus() == null || a.getStatus() != 1) {
-            throw new BusinessWarningException("仅待就诊状态可取消");
+            throw new BusinessWarningException("只有待就诊状态的预约可以取消");
         }
         a.setStatus(3);
         a.setUpdatedTime(LocalDateTime.now());
@@ -200,10 +220,20 @@ public class AdminAppointmentController {
         vo.setTimeSlot(a.getTimeSlot());
         vo.setQueueNo(a.getQueueNo());
         vo.setStatus(a.getStatus());
-        vo.setStatusText(statusText(a.getStatus()));
         vo.setFeeAmount(a.getFeeAmount());
         vo.setPaid(a.getPaid());
         vo.setCreatedTime(a.getCreatedTime());
+
+        // 根据 status 和 paid 组合设置状态文本
+        if (a.getStatus() != null && a.getStatus() == 1) {
+            if (a.getPaid() != null && a.getPaid() == 1) {
+                vo.setStatusText("待就诊");
+            } else {
+                vo.setStatusText("待支付");
+            }
+        } else {
+            vo.setStatusText(statusText(a.getStatus()));
+        }
 
         Doctor d = doctorMap.get(a.getDoctorId());
         if (d != null) {
@@ -220,6 +250,27 @@ public class AdminAppointmentController {
         return vo;
     }
 
+    /**
+     * 签到
+     */
+    @PutMapping("/{appointmentId}/checkin")
+    public ResultVo<Void> checkin(@PathVariable Long appointmentId) {
+        Appointment a = appointmentMapper.selectById(appointmentId);
+        if (a == null) {
+            throw new ServiceException("预约记录不存在");
+        }
+        if (a.getStatus() != 1) {
+            throw new BusinessWarningException("只有待就诊状态的预约可以签到");
+        }
+        if (a.getPaid() == null || a.getPaid() != 1) {
+            throw new BusinessWarningException("请先支付挂号费");
+        }
+        a.setStatus(2); // 改为已就诊
+        a.setCheckInTime(LocalDateTime.now());
+        a.setUpdatedTime(LocalDateTime.now());
+        appointmentMapper.updateById(a);
+        return ResultVo.ok();
+    }
     private String statusText(Integer status) {
         if (status == null) return "未知";
         switch (status) {

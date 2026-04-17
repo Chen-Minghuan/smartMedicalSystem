@@ -363,10 +363,11 @@ export function cancelAppointment(appointmentId) {
 /**
  * 获取我的预约列表
  */
-export function getMyAppointments() {
+export function getMyAppointments(params) {
   return request({
     url: '/patient/appointment/my',
-    method: 'get'
+    method: 'get',
+    params
   })
 }
 
@@ -377,6 +378,27 @@ export function getAppointmentDetail(appointmentId) {
   return request({
     url: `/patient/appointment/${appointmentId}`,
     method: 'get'
+  })
+}
+
+
+/**
+ * 支付预约
+ */
+export function payAppointment(appointmentId) {
+  return request({
+    url: `/patient/appointment/pay/${appointmentId}`,
+    method: 'put'
+  })
+}
+
+/**
+ * 签到
+ */
+export function checkInAppointment(appointmentId) {
+  return request({
+    url: `/admin/appointment/${appointmentId}/checkin`,
+    method: 'put'
   })
 }
 

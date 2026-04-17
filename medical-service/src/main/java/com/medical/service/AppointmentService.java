@@ -21,6 +21,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.springframework.util.StringUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -109,16 +110,48 @@ public class AppointmentService {
     }
 
     /**
-     * 获取患者的预约列表
+     * 支付预约
      */
-    public List<AppointmentVo> getPatientAppointments(Long patientId) {
+    @Transactional(rollbackFor = Exception.class)
+    public void payAppointment(Long appointmentId, Long patientId) {
+        Appointment appointment = appointmentMapper.selectById(appointmentId);
+        if (appointment == null) {
+            throw new BusinessWarningException("预约记录不存在");
+        }
+        if (!appointment.getPatientId().equals(patientId)) {
+            throw new BusinessWarningException("无权操作此预约");
+        }
+        if (appointment.getStatus() != 1) {
+            throw new BusinessWarningException("只有待就诊状态的预约可以支付");
+        }
+        if (appointment.getPaid() == 1) {
+            throw new BusinessWarningException("该预约已支付");
+        }
+
+        appointment.setPaid(1);
+        appointment.setPaidTime(LocalDateTime.now());
+        appointment.setUpdatedTime(LocalDateTime.now());
+        appointmentMapper.updateById(appointment);
+    }
+
+    /**
+     * 获取患者的预约列表（支持筛选）
+     */
+    public List<AppointmentVo> getPatientAppointments(Long patientId, Integer status, Integer paid, String keyword) {
         LambdaQueryWrapper<Appointment> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Appointment::getPatientId, patientId)
-                .orderByDesc(Appointment::getAppointmentDate)
-                .orderByAsc(Appointment::getTimeSlot);
+        wrapper.eq(Appointment::getPatientId, patientId);
+
+        if (status != null) {
+            wrapper.eq(Appointment::getStatus, status);
+        }
+        if (paid != null) {
+            wrapper.eq(Appointment::getPaid, paid);
+        }
+
+        wrapper.orderByDesc(Appointment::getAppointmentDate).orderByAsc(Appointment::getTimeSlot);
         List<Appointment> appointments = appointmentMapper.selectList(wrapper);
 
-        return appointments.stream().map(a -> {
+        List<AppointmentVo> voList = appointments.stream().map(a -> {
             AppointmentVo vo = new AppointmentVo();
             vo.setAppointmentId(a.getAppointmentId());
             vo.setAppointmentNo(a.getAppointmentNo());
@@ -149,6 +182,18 @@ public class AppointmentService {
 
             return vo;
         }).collect(Collectors.toList());
+
+        // 关键字筛选（支持预约单号、医生姓名、科室名称）
+        if (keyword != null && org.springframework.util.StringUtils.hasText(keyword)) {
+            String kw = keyword.trim().toLowerCase();
+            voList = voList.stream().filter(v ->
+                    (v.getAppointmentNo() != null && v.getAppointmentNo().toLowerCase().contains(kw)) ||
+                            (v.getDoctorName() != null && v.getDoctorName().toLowerCase().contains(kw)) ||
+                            (v.getDeptName() != null && v.getDeptName().toLowerCase().contains(kw))
+            ).collect(Collectors.toList());
+        }
+
+        return voList;
     }
 
     /**

@@ -29,6 +29,7 @@
         </el-select>
         <el-date-picker v-model="dateFilter" class="filter-select" type="date" value-format="YYYY-MM-DD" placeholder="就诊日期" @change="loadData" />
         <el-select v-model="statusFilter" class="filter-select" clearable placeholder="状态" style="width: 120px" @change="loadData">
+          <el-option :value="0" label="待支付" />
           <el-option :value="1" label="待就诊" />
           <el-option :value="2" label="已就诊" />
           <el-option :value="3" label="已取消" />
@@ -51,10 +52,27 @@
         </el-table-column>
         <el-table-column prop="statusText" label="状态" width="100" />
         <el-table-column prop="createdTime" label="创建时间" width="165" />
-        <el-table-column label="操作" width="160" fixed="right">
+        <el-table-column label="操作" width="150" fixed="right" align="center">
           <template #default="{ row }">
-            <el-button link type="primary" @click="openDetail(row)">详情</el-button>
-            <el-button link type="danger" :disabled="row.status !== 1" @click="cancelRow(row)">取消</el-button>
+            <div style="align-items: center;">
+              <el-button link type="primary" @click="openDetail(row)">详情</el-button>
+              <el-button
+                  v-if="row.status === 1 && row.paid === 1"
+                  link
+                  type="success"
+                  @click="checkinRow(row)"
+              >
+                签到
+              </el-button>
+              <el-button
+                  v-if="row.status === 1"
+                  link
+                  type="danger"
+                  @click="cancelRow(row)"
+              >
+                取消
+              </el-button>
+            </div>
           </template>
         </el-table-column>
       </el-table>
@@ -101,7 +119,8 @@ import {
   getAdminAppointmentDetail,
   getAdminAppointmentPage,
   getDeptOptions,
-  getDoctorPage
+  getDoctorPage,
+  checkInAppointment
 } from '@/api/admin'
 
 const loading = ref(false)
@@ -162,15 +181,27 @@ const loadDoctors = async () => {
 const loadData = async () => {
   loading.value = true
   try {
-    const res = await getAdminAppointmentPage({
+    const params = {
       current: currentPage.value,
       size: pageSize.value,
       keyword: keyword.value || undefined,
-      status: statusFilter.value ?? undefined,
       deptId: deptId.value ?? undefined,
       doctorId: doctorId.value ?? undefined,
       date: dateFilter.value || undefined
-    })
+    }
+    // 处理状态筛选
+    if (statusFilter.value === 0) {
+      // 待支付
+      params.status = 1
+      params.paid = 0
+    } else if (statusFilter.value === 1) {
+      // 待就诊
+      params.status = 1
+      params.paid = 1
+    } else if (statusFilter.value != null) {
+      params.status = statusFilter.value
+    }
+    const res = await getAdminAppointmentPage(params)
     tableData.value = res?.list || []
     total.value = res?.total || 0
   } finally {
@@ -213,6 +244,30 @@ const cancelRow = async (row) => {
   await cancelAdminAppointment(row.appointmentId)
   ElMessage.success('已取消预约')
   loadData()
+}
+
+// 签到方法
+const checkinRow = async (row) => {
+  if (row.status !== 1) {
+    ElMessage.warning('只有待就诊状态的预约可以签到')
+    return
+  }
+  if (row.paid !== 1) {
+    ElMessage.warning('请先支付挂号费')
+    return
+  }
+  try {
+    await ElMessageBox.confirm(`确定患者「${row.patientName}」已签到就诊吗？`, '签到确认', { type: 'info' })
+  } catch {
+    return
+  }
+  try {
+    await checkInAppointment(row.appointmentId)
+    ElMessage.success('签到成功')
+    loadData()
+  } catch (error) {
+    ElMessage.error(error.message || '签到失败')
+  }
 }
 
 onMounted(async () => {
